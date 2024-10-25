@@ -26,6 +26,9 @@ enum layer_names {
   _BOOT,
 };
 
+static uint16_t capsblink_timer;
+enum led_mode lm; 
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[_MAIN] = LAYOUT_all(
             QK_GESC, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL, 
@@ -74,15 +77,27 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 #endif
 
 
-void keyboard_pre_init_user(void) {
+void keyboard_post_init_user(void) {
   rgblight_setrgb(RGB_RED);
-  //capsblink_timer = timer_read();
+  capsblink_timer = timer_read();
+  lm = LED_ON;
 }
 
 
 bool led_update_kb(led_t led_state) {    
   if (led_state.caps_lock){
-    set_nibble_LED_r(LED_ON);
+    if (timer_elapsed(capsblink_timer) < 100) {
+      set_nibble_LED_r(lm);
+    } else {
+      //reset timer
+      capsblink_timer = timer_read();
+      //swap led mode (on/off)
+      if (lm == LED_ON) {
+        lm = LED_OFF; 
+      } else {
+        lm = LED_ON;
+      }
+    }
   } else {
     set_nibble_LED_r(LED_OFF);
   }
