@@ -27,7 +27,8 @@ enum layer_names {
 };
 
 static uint16_t capsblink_timer;
-enum led_mode lm; 
+enum led_mode lm;
+bool capsblink;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[_MAIN] = LAYOUT_all(
@@ -78,37 +79,50 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 
 
 void keyboard_post_init_user(void) {
+  debug_enable=false;
+  debug_matrix=false;
+  debug_keyboard=false;
+  debug_mouse=false;
   rgblight_setrgb(RGB_RED);
-  capsblink_timer = timer_read();
   lm = LED_ON;
+  capsblink = false;
 }
 
 
-bool led_update_kb(led_t led_state) {    
+bool led_update_user(led_t led_state) {    
   if (led_state.caps_lock){
-    if (timer_elapsed(capsblink_timer) < 100) {
-      set_nibble_LED_r(lm);
-    } else {
-      //reset timer
-      capsblink_timer = timer_read();
-      //swap led mode (on/off)
-      if (lm == LED_ON) {
-        lm = LED_OFF; 
-      } else {
-        lm = LED_ON;
-      }
-    }
+    capsblink_timer = timer_read();
+    capsblink = true;
   } else {
     set_nibble_LED_r(LED_OFF);
+    capsblink = false;
   }
   return true;
 }
 
+void housekeeping_task_user(void) {
+  if (capsblink) {
+    set_nibble_LED_r(lm);
+    if (timer_elapsed(capsblink_timer) > 100) {
+          //reset timer
+          capsblink_timer = timer_read();
+          //swap led mode (on/off)
+          if (lm == LED_ON) {
+            lm = LED_OFF; 
+          } else {
+            lm = LED_ON;
+          }    
+      }
+  }
+}
 
 layer_state_t layer_state_set_user(layer_state_t state) {
   switch (get_highest_layer(state)) {
     case _AROW:
       rgblight_setrgb(RGB_BLUE);
+      break;
+    case _BOOT:
+      rgblight_setrgb(RGB_GREEN);
       break;
     default:
       rgblight_setrgb(RGB_RED);
